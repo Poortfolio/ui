@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:24.0.2-dind
+        options: --dns 8.8.8.8
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Format code
+        run: npm run format
+
+      - name: Lint code
+        run: npm run lint
+
+      - name: Type Check
+        run: npm run type-check
+
+      - name: Unit Tests with Coverage
+        run: npm run test:ut:coverage
+
+      - name: Integration Tests
+        run: npm run test:it
+
+      - name: E2E Tests
+        run: npm run test:e2e
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+
+      - name: Docker Build
+        run: docker build -t ci-test-image:latest .
